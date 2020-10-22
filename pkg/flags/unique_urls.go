@@ -56,6 +56,9 @@ func NewUniqueURLsWithExceptions(s string, exceptions ...string) *UniqueURLs {
 	for _, v := range exceptions {
 		us.Allowed[v] = struct{}{}
 	}
+	if s == "" {
+		return us
+	}
 
 	if err := us.Set(s); err != nil {
 		panic(fmt.Sprintf("new UniqueURLs should never fail %v", err))

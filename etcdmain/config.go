@@ -106,7 +106,7 @@ func newConfig() *config {
 		"List of URLs to listen on for client traffic.",
 	)
 	fs.Var(
-		flags.NewUniqueURLsWithExceptions("", "Print the version and exit."),
+		flags.NewUniqueURLsWithExceptions("", ""),
 		"listen-metrics-urls",
 		"List of URLs to listen on for the metrics and health endpoints.",
 	)
@@ -202,7 +202,7 @@ func (cfg *config) configFromCmd() error {
 		return nil
 	}
 
-	//上一步从环境变量中 读取了新的配置, 然后再从flagset中更新到embedconfig中
+	//cmd+env 更新ec, 注意env不会覆盖cmd中的，只会补充cmd没有设置的（默认的也会被env覆盖）
 	cfg.ec.LPUrls = flags.UniqueURLsFromFlag(cfg.cf.flagSet, "listen-peer-urls")
 	cfg.ec.APUrls = flags.UniqueURLsFromFlag(cfg.cf.flagSet, "initial-advertise-peer-urls")
 	cfg.ec.LCUrls = flags.UniqueURLsFromFlag(cfg.cf.flagSet, "listen-client-urls")
@@ -212,13 +212,18 @@ func (cfg *config) configFromCmd() error {
 	cfg.cp.Fallback = cfg.cf.fallback.String()
 	cfg.cp.Proxy = cfg.cf.proxy.String()
 
-	//设置了listen-client-urls，但未设置advertise-client-urls, 切不可能是代理模式，则将ACURLs清空
+	//设置了listen-client-urls，但未设置advertise-client-urls, 切不可能是代理模式，则将ACUrls清空
 	missingAC := flags.IsSet(cfg.cf.flagSet, "listen-client-urls") && !flags.IsSet(cfg.cf.flagSet, "advertise-client-urls")
 	if !cfg.mayBeProxy() && missingAC {
 		cfg.ec.ACUrls = nil
 	}
 
-	return nil
+	//关闭集群模式，如果发现模式打开切集群模式关闭着
+	if (cfg.ec.Durl != "" || cfg.ec.DNSCluster != "" || cfg.ec.DNSClusterName != "") && flags.IsSet(cfg.cf.flagSet, "initial-cluster") {
+		cfg.ec.InitialCluster = ""
+	}
+
+	return cfg.validate()
 }
 
 func (cfg *config) configFromFile() error {
@@ -233,3 +238,17 @@ func (cfg *config) mayBeProxy() bool {
 	//切代理模式不为关闭状态也有可能是代理模式
 	return cfg.cp.Proxy != proxyFlagOff || mayFallBackToProxy
 }
+
+func (cfg *config) validate() error {
+	err := cfg.ec.Validate()
+
+	if err == embed.ErrUnsetAdvertiseClientURLsFlag && cfg.mayBeProxy() {
+		return nil
+	}
+
+	return err
+}
+
+func (cfg config) isProxy() bool               { return cfg.cf.proxy.String() != proxyFlagOff }
+func (cfg config) isReadOnlyProxy() bool       { return cfg.cf.proxy.String() == proxyFlagReadonly }
+func (cfg config) shouldFallBackToProxy() bool { return cfg.cf.fallback.String() == fallbackFlagProxy }
