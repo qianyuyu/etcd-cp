@@ -1,7 +1,7 @@
 package flags
 
 import (
-	"awesomeProject2/etcd/pkg/types"
+	"etcd-cp/pkg/types"
 	"flag"
 	"fmt"
 	"net/url"

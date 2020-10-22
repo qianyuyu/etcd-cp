@@ -1,9 +1,9 @@
 package etcdmain
 
 import (
-	"awesomeProject2/etcd/embed"
-	"awesomeProject2/etcd/pkg/flags"
-	"awesomeProject2/etcd/version"
+	"etcd-cp/embed"
+	"etcd-cp/pkg/flags"
+	"etcd-cp/version"
 	"flag"
 	"fmt"
 	"go.uber.org/zap"

@@ -1,7 +1,7 @@
 package etcdmain
 
 import (
-	"awesomeProject2/etcd/embed"
+	"etcd-cp/embed"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"strconv"

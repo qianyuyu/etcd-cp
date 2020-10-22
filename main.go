@@ -1,6 +1,6 @@
 package main
 
-import "awesomeProject2/etcd/etcdmain"
+import "etcd-cp/etcdmain"
 
 func main() {
 	etcdmain.Main()
