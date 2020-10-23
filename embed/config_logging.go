@@ -12,6 +12,15 @@ import (
 
 var grpcLogOnce = new(sync.Once)
 
+func (cfg Config) GetLogger() *zap.Logger {
+	//日志器可能会被重新设置？ 所以要复制一份
+	cfg.loggerMu.RLocker()
+	l := cfg.logger
+	cfg.loggerMu.RUnlock()
+
+	return l
+}
+
 func (cfg *Config) setupLogging() error {
 	switch cfg.Logger {
 	case "capnslog":
