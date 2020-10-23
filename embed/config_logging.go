@@ -1,6 +1,7 @@
 package embed
 
 import (
+	"crypto/tls"
 	"etcd-cp/pkg/logutil"
 	"fmt"
 	"go.uber.org/zap"
@@ -74,7 +75,7 @@ func (cfg *Config) setupLogging() error {
 					//这里开始初始化 grpc服务端的日志器, 说白了让grpc也用zap做日志器
 					grpcLogOnce.Do(func() {
 						var gl grpclog.LoggerV2
-						gl, err = logutil.NewGRPCLoggerV2(copied)
+						gl, err = logutil.NewGRPCLoggerV2(&copied)
 						if err == nil {
 							grpclog.SetLoggerV2(gl)
 						}
@@ -86,6 +87,42 @@ func (cfg *Config) setupLogging() error {
 		} else {
 
 		}
+
+		err := cfg.ZapLoggerBuilder(cfg)
+		if err != nil {
+			return err
+		}
+
+		logTLSHandShakeFailure := func(conn *tls.Conn, err error) {
+			state := conn.ConnectionState()
+			remoteAddr := conn.RemoteAddr().String()
+			serverName := state.ServerName
+
+			if len(state.PeerCertificates) > 0 {
+				cert := state.PeerCertificates[0]
+				ips := make([]string, len(cert.IPAddresses))
+				for i := range cert.IPAddresses {
+					ips[i] = cert.IPAddresses[i].String()
+				}
+
+				cfg.logger.Warn("rejected connection",
+					zap.String("remote-addr", remoteAddr),
+					zap.String("server-name", serverName),
+					zap.Strings("ip-addresses", ips),
+					zap.Strings("dns-names", cert.DNSNames),
+					zap.Error(err),
+				)
+			} else {
+				cfg.logger.Warn("rejected connection",
+					zap.String("remote-addr", remoteAddr),
+					zap.String("server-name", serverName),
+					zap.Error(err),
+				)
+			}
+		}
+
+		cfg.ClientTLSInfo.HandShakeFailure = logTLSHandShakeFailure
+		cfg.PeerTLSInfo.HandShakeFailure = logTLSHandShakeFailure
 
 	default:
 		return fmt.Errorf("unknown logger option %q", cfg.Logger)

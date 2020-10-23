@@ -2,6 +2,7 @@ package embed
 
 import (
 	"etcd-cp/pkg/logutil"
+	"etcd-cp/pkg/transport"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -48,6 +49,10 @@ type Config struct {
 
 	LPUrls, LCUrls []url.URL
 	APUrls, ACUrls []url.URL
+	ClientTLSInfo  transport.TLSInfo
+	ClientAutoTLS  bool
+	PeerTLSInfo    transport.TLSInfo
+	PeerAutoTLS    bool
 
 	InitialCluster string `json:"initial-cluster"`
 	DNSCluster     string `json:"discovery-srv"`
